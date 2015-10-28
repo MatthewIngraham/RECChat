@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+  <!--Firebase-->
+  <script src='https://cdn.firebase.com/js/client/2.2.1/firebase.js'></script>
+  <!--JQuery-->
+  <script src='https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js'></script>
+  <!--BOOTSTRAP-->
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/css/bootstrap-responsive.min.css" />
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/js/bootstrap-modal.min.js"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+
+  <!--CSS-->
+  <link rel='stylesheet' type='text/css' href='/css/style.css'>
+</head>
+
+<body>
+
+  <div class= "container">
+    <div class= "row">
+      <div class= "col-xs-3 visit">
+
+
+        <input type='text' id='nameInput' class="inputbox" placeholder='Name'>
+        <p>Users</p>
+
+        <p>Channels</p>
+        <div id="namesDiv"></div>
+
+        <!--These are my channel buttons!-->
+
+        <button type="button" class="btn btn-success btn-block" onclick="channel('general')">General</button>
+        <button type="button" class="btn btn-success btn-block" onclick="channel('Create')">Create</button>
+        <button type="button" class="btn btn-success btn-block" onclick="channel('Promote')">Promote</button>
+      </div>
+
+
+      <!--Main Messages-->
+      <div class="message-container">
+        <div id='messagesDiv'class="messages"></div>
+        <center class="inputfeild">
+          <input type='text' id='messageInput' class="inputboxM" placeholder='Message'> 
+        </center>
+      </div>
+    </div>
+  </div>
+  <script>
+  function channel(field){
+    console.log('we are currently in channel', field);
+    curField = field;
+    $('#messagesDiv').html('');
+    myDataRef.child('channel').child(curField).off('child_added');
+    myDataRef.child('channel').child(curField).on('child_added', function(snapshot) {
+      var message = snapshot.val();
+      console.log(message);
+      displayChatMessage(message.name, message.text);
+    });
+  }
+        //Check out where the message input is changed! For instance, curField is a new child in there.
+        $('#messageInput').keypress(function (e) {
+          if (e.keyCode == 13) {
+            //check to see if user is logged in?
+            if(!name){
+              authModal.modal('show');
+              } else { //don't submit anything unless we know the user's name!
+              var name = $('#nameInput').val();
+              var text = $('#messageInput').val();
+              console.log(text);
+              myDataRef.child('channel').child(curField).push({name: name, text: text});
+              $('#messageInput').val('');
+            }
+          }
+        }); 
+        var myDataRef = new Firebase('https://recc.firebaseio.com/');
+      var authModal = $('#authModal').modal( {show: false }); //we don't want the modal to show immediately
+      var curField = "general";
+       // Create a callback which logs the current auth state
+       //want to check to see if user is alread logged in; this is with a getAuth func.
+       var authData = myDataRef.getAuth();
+       if (authData){
+        var userId = authData.uid;
+        name = authData[authData.provider].displayName;
+        console.log("user is already logged in");
+      }
+       //Check for changes here! I feel a few things were changed in here but I do not remember what
+       
+       function login(provider){
+        console.log("login with ", provider);
+        authModal.modal('hide');
+        myDataRef.authWithOAuthPopup(provider, function(error, authData) {
+         if (error) {
+          console.log("Login Failed!", error);
+        } else {
+          console.log("Authenticated successfully with payload:", authData);
+          //console.log("User " + authData.uid + " is logged in with " + authData.provider);
+          var userId = authData.uid;
+
+          name = authData[authData.provider].displayName;
+          myDataRef.child('user').child(userId).once("value", function(snapshot){
+             var ifExists = snapshot.exists(); //a firebase function
+             if (ifExists){
+              console.log('user is already in the system');
+            }  else {
+              myDataRef.child('user').child(userId).push({id: userId, name:name});
+            }
+          })
+        }
+      });
+      }
+      
+      myDataRef.child('user').on('value', function(snapshot){
+        var allNames = snapshot.val();
+           //console.log(allNames);
+           for (var u in allNames) {
+             for(var i in allNames[u]){
+              console.log(allNames[u][i].name);
+              displayNamesUser(allNames[u][i].name)
+            }
+            
+          }
+        })
+      
+      var myDataRef = new Firebase('https://recc.firebaseio.com/');
+      var name= ""
+      $('#messageInput').keypress(function (e) {
+        if (e.keyCode == 13) {
+          //check to see if the user is logged in
+          if(!name){
+            authModal.modal('show');
+          }
+          var name = $('#nameInput').val();
+          var text = $('#messageInput').val();
+          myDataRef.push({name: name, text: text});
+          $('#messageInput').val('');
+        }
+      });
+      myDataRef.on('child_added', function(snapshot) {
+        var message = snapshot.val();
+        displayChatMessage(message.name, message.text);
+      });
+      function displayChatMessage(name, text) {
+        $('<div/>').text(text).prepend($('<em/>').text(name+': ')).appendTo($('#messagesDiv'));
+        $('#messagesDiv')[0].scrollTop = $('#messagesDiv')[0].scrollHeight;
+      };
+
+              // Check for youTube video link sharing
+        if (text.match(/(https{0,1}:\/\/(www\.)*?(youtube\.com\/watch\?v=|youtu\.be\/)(\w+))/)) {
+            // Looks for both regular youTube and shortened URL versions
+            var youTubeLink = RegExp.$1;
+            var embedlyURL = ""
+            var embedlyYouTube = embedlyURL + youTubeLink
+            var videoEmbedCode = ""
+            $.ajax({
+                url: encodeURI(embedlyYouTube),
+                dataType: 'json',
+                async: false,
+                success: function(data) {
+                    videoEmbedCode = data.html
+                    text += "<br>" + videoEmbedCode
+                }
+            });
+        }
+        // Send the original message
+        chatDB.child("Channel_Posts").child(channelName).child('messages').push({name: name, text: text, dateAdded: timestamp, avatarURL: avatarURL})
+        $('#messageInput').val('')
+
+      </script>
+    </body>
+    </html>
